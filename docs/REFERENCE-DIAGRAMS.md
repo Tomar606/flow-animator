@@ -99,6 +99,78 @@ at the shipped settings:
 ./run.sh key reference/biology/clip-set/BIO-C2-LA-01_green.mp4 --id BIO-C2-LA-01
 ```
 
+
+---
+
+## `reference/biology/ncert-figures/` — every captioned figure from the NCERT textbook
+
+110 figures from the thirteen chapters of NCERT Class 12 Biology (Hindi edition,
+`lhbo101`–`lhbo113`), one folder per chapter, named by the figure number printed
+in the book: `chapter-05/fig-5.10.png`.
+
+Each is the page region rendered at 200 dpi, so it carries the artwork, its
+labels **and** its caption exactly as printed — which matters, because the
+caption is the only place the figure number and its Hindi title appear together.
+
+| chapter | figures | numbers |
+|---|---|---|
+| `chapter-01` — पुष्पी पादपों में लैंगिक जनन — Sexual Reproduction in Flowering Plants | 14 | 1.1–1.15 |
+| `chapter-02` — मानव जनन — Human Reproduction | 12 | 2.1–2.12 |
+| `chapter-03` — जनन स्वास्थ्य — Reproductive Health | 4 | 3.1–3.4 |
+| `chapter-04` — वंशागति तथा विविधता के सिद्धांत — Principles of Inheritance and Variation | 18 | 4.1–4.18 |
+| `chapter-05` — वंशागति का आणविक आधार — Molecular Basis of Inheritance | 15 | 5.1–5.15 |
+| `chapter-06` — विकास — Evolution | 10 | 6.1–6.10 |
+| `chapter-07` — मानव स्वास्थ्य तथा रोग — Human Health and Disease | 9 | 7.1–7.11 |
+| `chapter-08` — खाद्य उत्पादन में वृद्धि की कार्यनीति — Strategies for Enhancement in Food Production | 7 | 8.2–8.8 |
+| `chapter-09` — मानव कल्याण में सूक्ष्मजीव — Microbes in Human Welfare | 7 | 9.1–9.7 |
+| `chapter-10` — जैव प्रौद्योगिकी — सिद्धांत व प्रक्रम — Biotechnology: Principles and Processes | 3 | 10.1–10.3 |
+| `chapter-11` — जैव प्रौद्योगिकी एवं उसके उपयोग — Biotechnology and its Applications | 5 | 11.1–11.5 |
+| `chapter-12` — जीव और समष्टियाँ — Organisms and Populations | 4 | 12.1–12.4 |
+| `chapter-13` — पारितंत्र / जैव विविधता — Ecosystem and Biodiversity | 2 | 13.1–13.2 |
+
+Some numbers are missing from a chapter's range: the book uses a figure number in
+its prose without ever captioning the figure, and only captioned figures are
+extracted. Chapter 8 starts at 8.2 for that reason.
+
+### What these are for
+
+**They are the accuracy authority for a brief.** NCERT wins wherever it and a
+question bank disagree, and a brief that contradicts the textbook produces a
+clip that is confidently, plausibly wrong — the most expensive kind, because it
+survives review. Before writing `draws`, open the chapter's figure and describe
+what is actually in it.
+
+**They are also candidates for the reference-attach route.** A figure can be
+uploaded into Flow as a reference image so the generation is conditioned on it
+rather than on the prose alone. Note what that does and does not buy you: it
+holds the *form* steady and it does not make a count reliable. The topic that
+was regenerated against `reference_book_figure.png` still came back with the
+wrong number of cells.
+
+### Regenerating them
+
+The figures are committed, so you do not need to. If you want to redo them from
+your own copy of the PDFs — a different edition, or the English one:
+
+```bash
+./.venv/bin/pip install pymupdf
+./.venv/bin/python tools/extract_ncert_figures.py "/path/to/NCERT PDFs" reference/biology/ncert-figures
+```
+
+`tools/extract_ncert_figures.py` explains why it renders page regions instead of
+pulling the embedded images, and why the caption pattern matches `fp=k` rather
+than `चित्र`. The short version of the second one: these PDFs were set in
+PageMaker with a pre-Unicode Devanagari font, so the text layer is mojibake and
+the word never appears in it.
+
+### Why this repository is private
+
+Every page of the source PDFs carries a diagonal **"© not to be republished"**
+notice, and it renders into every extracted figure. That is the reason this repo
+is private rather than public, and the reason to keep it that way — share it by
+adding collaborators, not by making it public or re-hosting the figures
+elsewhere.
+
 ---
 
 ## `reference/biology/style-reference-plant-cell.png`

@@ -193,13 +193,25 @@ src/flowanim/
   key.py                  chroma key, plus the measurement that catches a bad one
   deliver.py              what lands in delivery/, and the manifest
   cli.py                  the commands above
-reference/biology/        source scans, six attempts at one topic, fourteen clips
+reference/biology/        source scans, six attempts at one topic, fourteen clips,
+                          and all 110 captioned NCERT Class 12 figures
+tools/                    one-off: extract the NCERT figures from the chapter PDFs
 docs/
   ROUTING.md              what belongs here and what belongs in Manim  ← read this
   WRITING-BRIEFS.md       how to write a brief that works
   BROWSER-SETUP.md        Chrome and Brave, and the silent Brave failure
   REFERENCE-DIAGRAMS.md   every file in reference/, and what it is
 ```
+
+## Keep this repository private
+
+`reference/biology/` contains figures rendered from the NCERT Class 12 Biology
+PDFs, and every page of those carries a diagonal **"© not to be republished"**
+notice which renders into each figure. Share this by adding collaborators, not by
+making the repo public or re-hosting the figures. Everything else in here —
+the code, the briefs, the generated clips — is ours.
+
+---
 
 Adapted from [pranshu0604/flow-bridge](https://github.com/pranshu0604/flow-bridge),
 whose two load-bearing discoveries — the trusted-keystroke insert, and reading
