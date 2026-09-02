@@ -211,9 +211,3 @@ notice which renders into each figure. Share this by adding collaborators, not b
 making the repo public or re-hosting the figures. Everything else in here —
 the code, the briefs, the generated clips — is ours.
 
----
-
-Adapted from [pranshu0604/flow-bridge](https://github.com/pranshu0604/flow-bridge),
-whose two load-bearing discoveries — the trusted-keystroke insert, and reading
-Flow's own media URLs out of the DOM instead of scraping the ⋮ menu — are what
-make any of this possible.
