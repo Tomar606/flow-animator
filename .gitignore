@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Written by setup.sh for the machine it ran on, not for the repo.
+config.json
+run.sh
+NEXT-STEPS.md
+
+# Delivered clips. These are outputs — hand the folder to the video project,
+# do not commit it. reference/ is committed on purpose; delivery/ is not.
+delivery/

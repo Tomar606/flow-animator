@@ -1,0 +1,4 @@
+# Two libraries, both only for measuring the key. Everything else is stdlib,
+# and the actual video work is ffmpeg, which is not a Python package.
+numpy>=1.24
+Pillow>=10.0
