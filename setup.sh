@@ -153,26 +153,31 @@ Everything below is filled in with your real paths.
 
 ## Every time
 
-    cd $ROOT
-    ./run.sh                     # leave this running
+1. Open your project in Flow (https://labs.google/fx/tools/flow) and leave the
+   tab open. That is all the browser asks of you.
+2. Run it:
 
-Then in Flow (https://labs.google/fx/tools/flow), open your project and:
+       cd $ROOT
+       ./run.sh
 
-1. Click the extension's panel (the toolbar icon re-injects it if it is missing).
-2. **Teach: prompt box** — click Flow's prompt box.
-3. **Teach: Create button** — click Flow's Create button.
-   Both are remembered. You only re-teach them if Flow changes its layout.
-4. **Connect** — the panel says how many topics it loaded.
-5. **Start** — it fills and submits each topic in turn.
-6. Wait. Flow takes a few minutes per clip.
-7. **Grab finished clips** — scroll first so every finished clip is on screen.
+That drives the whole thing from the terminal. For each topic it types the
+prompt, presses Create, waits for the clip, downloads it and keys it, then moves
+to the next one. Flow takes a few minutes per clip.
+
+**The tab does not need to be in front of you.** The extension drives it over
+the Chrome debugger protocol, which does not care whether the tab is visible.
+Go and do something else; the run continues.
+
+The panel the extension injects is a **status readout with no buttons** — there
+is nothing in the page to press. Close it and the run is unaffected.
 
 Each clip is keyed as it lands and written to:
 
     $ROOT/delivery/<TOPIC-ID>/
 
 Watch the terminal running \`./run.sh\`. It tells you, per clip, whether the key
-came out clean or whether the clip needs regenerating — and why.
+came out clean or whether the clip needs regenerating — and why. If a topic does
+not come back, the summary prints the \`--only\` line that re-runs just those.
 
 ## Your own topics
 
@@ -202,8 +207,10 @@ cat <<TXT
 
   ${bold}1.${off} Load the extension:  chrome://extensions → Developer mode → Load unpacked
                           $EXT
-  ${bold}2.${off} Start the bridge:    ./run.sh
-  ${bold}3.${off} Open Flow, press Connect in the panel, then Start.
+  ${bold}2.${off} Open your Flow project in a tab and leave it there.
+  ${bold}3.${off} Run it:              ./run.sh
+                          It drives Flow from the terminal; the tab can sit
+                          in the background and there is nothing to press.
 
   The full version of that, with your paths filled in, is in ${bold}NEXT-STEPS.md${off}.
   Before writing your own topics, read ${bold}docs/WRITING-BRIEFS.md${off} and run ${bold}./run.sh route${off}.

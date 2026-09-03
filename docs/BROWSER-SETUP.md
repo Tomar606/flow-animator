@@ -32,17 +32,21 @@ what happened.
 
 ## 2. Downloads
 
-The extension writes clips into a subfolder of your browser's download directory,
-and the bridge watches that folder. They must agree.
+`chrome.downloads.download` only accepts a path **relative** to the browser's
+download directory — it rejects absolute paths and `..` — so clips land in a
+subfolder of that directory and are moved into `delivery/` afterwards. Do not
+try to make the browser write straight into `delivery/`; it refuses, and the
+error surfaces as a bare "download refused".
 
 - Settings → Downloads → **turn OFF "Ask where to save each file"**. If the
-  browser opens a save dialog per clip, nothing lands where the bridge is looking.
+  browser opens a save dialog per clip, nothing lands where the run is looking.
 - The default location must match `"inbox"` in `config.json`. `setup.sh` writes
   it as `~/Downloads/flow_inbox`; change it there if your browser saves elsewhere.
 
-Chrome appends ` (1)` to a filename that is already taken and an extension cannot
-prevent it. The bridge strips that suffix, so a re-download of one topic still
-resolves to the right topic.
+The run deletes the target filename before each download. Chrome appends ` (1)`
+to a name that is already taken rather than overwriting, and a leftover clip from
+an earlier run would otherwise be picked up instantly and filed under this run's
+topic id — the wrong video, confidently labelled.
 
 ---
 
@@ -118,15 +122,24 @@ not needed it in practice.
 
 ```bash
 ./run.sh doctor        # Python, ffmpeg, libvpx, folders, port, topics file
-./run.sh               # then press Connect in the panel
+./run.sh serve         # the bridge alone: does the extension connect at all?
 ```
 
-If Connect fails, in this order:
+`serve` is the cheap test. It starts the bridge, waits for the extension and
+prints the Flow tab it found — without submitting anything or spending a credit.
+Once that says *connected*, `./run.sh` will too.
 
-1. Is `./run.sh` actually running, and on the port in `config.json`?
-2. Does the panel say **build mismatch**? Reload the extension and hard-reload
-   the tab.
-3. Brave? Section 4.
+If it never connects, in this order:
+
+1. Is a Google Flow tab actually open? The worker needs one to drive. `serve`
+   says `no Flow tab open yet` when the extension is fine but the tab is not.
+2. Does it report a **build mismatch**? That is the handshake catching a stale
+   extension — reload it at `chrome://extensions` and hard-reload the Flow tab.
+   There is no hot reload, and a stale build fails like a Flow redesign rather
+   than like stale code.
+3. Brave? Section 4. This is the failure with no error anywhere.
 4. Open the service worker's console — `chrome://extensions` → the extension →
-   **service worker** — and press Connect again. A CORS or network error appears
-   there and nowhere else.
+   **service worker**. A CORS or network error appears there and nowhere else.
+
+Note there is nothing to press in the page. The panel is a status readout; if it
+says *bridge not running*, the answer is in this list, not in the tab.

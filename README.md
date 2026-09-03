@@ -103,24 +103,35 @@ Full detail, including the one that will otherwise waste your afternoon, is in
 
 ## Use
 
+Open your Flow project in a tab. That is everything the browser asks of you.
+
 ```bash
-./run.sh                 # starts the bridge; leave it running
+./run.sh                 # drives Flow and delivers every clip
 ```
 
-Then in [Flow](https://labs.google/fx/tools/flow), open your project and use the
-panel the extension injects:
+The run is driven from here, not from the page. For each topic in turn it types
+the prompt, presses Create, waits for the clip, downloads it through your
+session, keys it and files it — then moves to the next one.
 
-1. **Teach: prompt box** — click Flow's prompt box.
-2. **Teach: Create button** — click Flow's Create button.
-   Taught once per browser profile; Flow's class names are hashed and change
-   between deploys, so teaching beats a committed selector.
-3. **Connect** — loads the topics and resets the numbering.
-4. **Start** — fills and submits each topic in turn.
-5. Wait. A few minutes per clip.
-6. **Grab finished clips** — scroll first so every finished clip is on screen.
+**The tab can sit behind whatever you are actually doing.** The extension drives
+it over the Chrome debugger protocol, which dispatches into the renderer and
+does not care whether the tab is visible, foreground, or on the desktop you are
+looking at. The panel it injects is a status readout with **no controls**; close
+it, or never open it, and the run is unaffected.
 
-Each clip is keyed as it lands. The terminal running `./run.sh` tells you, per
-clip, whether it came out clean:
+Two things a background tab breaks, both handled in `extension/background.js`:
+Slate drops input when `document.hasFocus()` is false, so the worker turns on
+`Emulation.setFocusEmulationEnabled`; and an MV3 worker is killed after 30s idle,
+so a 20s timer touches a trivial extension API — which is what actually resets
+the idle timer, a pending `fetch` does not — with a 30s alarm to restart the
+poll loop if it was killed anyway.
+
+There is nothing to teach. Every control the run touches in Flow's UI is named
+in [`selectors.json`](selectors.json), which is also the one file to edit when
+Flow moves something. It avoids hashed class names on purpose and prefers a
+`data-` attribute, an `aria-label`, or visible button text, in that order.
+
+The terminal tells you, per clip, whether it came out clean:
 
 ```
   ✓ BIO-C2-LA-01  Oogenesis: three unequal divisions, three polar bodies
@@ -152,13 +163,17 @@ recorded.
 ### Commands
 
 ```bash
-./run.sh run        # serve the briefs and deliver the clips   (the default)
+./run.sh run        # drive Flow and deliver the clips          (the default)
+./run.sh serve      # just the bridge, so the extension stays connected
 ./run.sh route      # the gate: what belongs here, what does not
 ./run.sh list       # the topics, their fields and their checks
 ./run.sh prompts    # the assembled prompts, for pasting by hand
 ./run.sh key FILE   # key a clip you already have, no browser involved
 ./run.sh doctor     # check this machine
 ```
+
+`run --only BIO-C2-LA-01,BIO-C4-LA-01` re-runs just those, which is what the
+summary prints for you when a topic does not come back.
 
 ---
 
@@ -187,9 +202,12 @@ compositing parameter. A plate is a request.
 setup.sh                  sets this up and tells you what to do next
 topics/                   the briefs you write  (biology_class12.py is the example)
 extension/                the Chrome MV3 extension — load this unpacked
+                          background.js drives the tab; content.js only reports
+selectors.json            every control this touches in Flow's UI, in one file
 src/flowanim/
   briefs.py               a brief → the prompt Flow gets
-  serve.py                the bridge: serves prompts, watches for clips
+  bridge.py               the verb server the extension long-polls
+  drive.py                the run loop: submit, wait, download, key, file
   key.py                  chroma key, plus the measurement that catches a bad one
   deliver.py              what lands in delivery/, and the manifest
   cli.py                  the commands above

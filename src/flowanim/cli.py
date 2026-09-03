@@ -1,6 +1,7 @@
 """`python -m flowanim <command>` — everything the local half can do.
 
-    run       serve the briefs and deliver every clip that comes back  (the one you want)
+    run       drive Flow and deliver every clip that comes back  (the one you want)
+    serve     just the bridge, so the extension stays connected between runs
     route     the gate: which topics belong here and which belong in Manim/SVG
     list      what is in the topics file, and which field each will use
     prompts   print the assembled prompts, for pasting into Flow by hand
@@ -13,13 +14,16 @@ import argparse
 import shutil
 import socket
 import sys
+import time
 from pathlib import Path
 
 from . import __version__, config
 from .briefs import BriefError, load as load_briefs
 from .deliver import deliver, summarise
 from .key import KeyError_
-from .serve import EXPECTED_BUILD, Job, clear_inbox, serve
+from .bridge import EXPECTED_BUILD, FlowBridge, FlowError
+from .drive import DriveError, load_selectors
+from .drive import run as drive_run
 
 
 ROUTE_GATE = """
@@ -173,17 +177,66 @@ def cmd_run(args, cfg) -> int:
     delivery = config.resolve(args.delivery or cfg["delivery"])
     port = args.port or cfg["port"]
 
-    if not args.keep_inbox:
-        n = clear_inbox(inbox, [b.id for b in briefs])
-        if n:
-            print(f"[bridge] cleared {n} clip(s) left in {inbox} by an earlier run")
+    try:
+        sel = load_selectors(config.ROOT / "selectors.json")
+    except (DriveError, ValueError) as e:
+        raise SystemExit(f"\n  {e}\n")
 
     print(f"\n  topics    {path}  ({len(briefs)})")
     print(f"  downloads {inbox}")
     print(f"  delivery  {delivery}\n")
-    job = Job(briefs, inbox, delivery,
-              make_preview=cfg["preview"], similarity=cfg["similarity"])
-    serve(job, port)
+
+    bridge = FlowBridge(port, inbox).start()
+    print(f"[bridge] http://127.0.0.1:{port}  (build {EXPECTED_BUILD})")
+    print("[bridge] waiting for the extension — open your Flow project in a tab.")
+    print("[bridge] the tab may stay in the background; nothing to press in it.")
+    try:
+        info = bridge.wait_for_worker(timeout=args.wait)
+    except FlowError as e:
+        bridge.stop()
+        raise SystemExit(f"\n  {e}\n")
+
+    tab = info.get("tab")
+    print(f"[bridge] connected — {tab or 'NO FLOW TAB OPEN'}")
+    if not tab:
+        bridge.stop()
+        raise SystemExit(
+            "\n  The extension is loaded but no Google Flow tab is open. Open your\n"
+            "  project at https://labs.google/fx/tools/flow and run this again.\n")
+    if info.get("discarded"):
+        print("[bridge] ! that tab is discarded — its renderer is not running. "
+              "Click it once to wake it.")
+
+    try:
+        return drive_run(briefs, bridge, sel, delivery,
+                         make_preview=cfg["preview"], similarity=cfg["similarity"])
+    except KeyboardInterrupt:
+        print("\n  stopped. Re-run to pick up the topics that did not deliver.")
+        return 130
+    finally:
+        bridge.stop()
+
+
+def cmd_serve(args, cfg) -> int:
+    """Just the bridge. Useful to keep the extension connected while you work."""
+    inbox = config.resolve(args.inbox or cfg["inbox"])
+    port = args.port or cfg["port"]
+    bridge = FlowBridge(port, inbox).start()
+    print(f"\n  bridge  http://127.0.0.1:{port}  (build {EXPECTED_BUILD})")
+    print(f"  inbox   {bridge.inbox_dir()}\n")
+    try:
+        info = bridge.wait_for_worker(timeout=args.wait)
+        print(f"  extension connected — {info.get('tab') or 'no Flow tab open yet'}")
+    except FlowError as e:
+        print(f"  waiting for the extension…\n  {e}")
+    print("\n  Ctrl-C to stop.")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        print("\n  stopped")
+    finally:
+        bridge.stop()
     return 0
 
 
@@ -215,6 +268,15 @@ def cmd_doctor(args, cfg) -> int:
     ext = config.ROOT / "extension" / "manifest.json"
     check("extension/ present", ext.exists(),
           "Load it at chrome://extensions → Developer mode → Load unpacked.")
+
+    selp = config.ROOT / "selectors.json"
+    try:
+        sel = load_selectors(selp)
+        need = [k for k in ("prompt",) if not sel.get(k)]
+        check(f"selectors.json ({len(sel)} entries)", not need,
+              f"missing a value for: {', '.join(need)}")
+    except Exception as e:
+        check("selectors.json", False, str(e).strip())
 
     try:
         path, briefs = _briefs(args, cfg)
@@ -253,6 +315,8 @@ def main(argv: list[str] | None = None) -> int:
     common.add_argument("--port", type=int, help="bridge port (default: from config.json)")
     common.add_argument("--force", action="store_true",
                         help="generate topics that are routed to Manim/SVG anyway")
+    common.add_argument("--wait", type=float, default=120.0, metavar="S",
+                        help="seconds to wait for the extension to connect (default: 120)")
 
     p = argparse.ArgumentParser(
         prog="flowanim", parents=[common],
@@ -262,9 +326,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--version", action="version", version=f"flow-animator {__version__}")
     sub = p.add_subparsers(dest="cmd", metavar="command")
 
-    runp = sub.add_parser("run", parents=[common], help="serve the briefs and deliver the clips")
-    runp.add_argument("--keep-inbox", action="store_true",
-                      help="do not clear old clips out of the download folder first")
+    sub.add_parser("run", parents=[common],
+                   help="drive Flow and deliver the clips")
+    sub.add_parser("serve", parents=[common],
+                   help="just the bridge, so the extension stays connected")
     sub.add_parser("route", parents=[common],
                    help="the gate: what belongs here and what does not")
     sub.add_parser("list", parents=[common], help="show the topics")
@@ -274,9 +339,8 @@ def main(argv: list[str] | None = None) -> int:
     k.add_argument("clip")
     k.add_argument("--id", help="topic id, if the filename does not say")
 
-    p.set_defaults(keep_inbox=False)
     args = p.parse_args(argv)
     cfg = config.load()
-    fn = {"run": cmd_run, "list": cmd_list, "prompts": cmd_prompts, "route": cmd_route,
-          "key": cmd_key, "doctor": cmd_doctor}.get(args.cmd or "run")
+    fn = {"run": cmd_run, "serve": cmd_serve, "list": cmd_list, "prompts": cmd_prompts,
+          "route": cmd_route, "key": cmd_key, "doctor": cmd_doctor}.get(args.cmd or "run")
     return fn(args, cfg)
